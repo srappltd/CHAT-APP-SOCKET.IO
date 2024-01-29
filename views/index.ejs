@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deshboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.1.0/fonts/remixicon.css" rel="stylesheet"/>
+    <style>
+        *{
+            scrollbar-width: none;
+        }
+        *::-webkit-scrollbar{
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="main" class="w-full h-screen flex">
+        <div class="left w-[25%] border-r">
+            <!-- // current user  -->
+            <div class="left-top w-full h-[10vh] flex justify-between items-center bg-[#e3e3e3] border-b px-5">
+                <div class="profile-pic flex items-center gap-3">
+                    <img src="../images/<%= user.picture%>" class="w-[50px] h-[50px] rounded-full border" alt="">
+                    <h1 class="font-medium"><%= user.name%></h1>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button onclick="groupJoinDialog()"><i class="ri-user-add-line"></i></button>
+                    <button onclick="groupDialog()"><i class="ri-add-line text-2xl"></i></button>
+                </div>
+            </div>
+
+            <!-- // all users online  -->
+            <div class="left-bottom w-full h-[90vh] overflow-y-auto"></div>
+        </div>
+        <div class="right w-[75%] h-full hidden" onclick="">
+                <!-- // current chat  user top  -->
+                <div class="right-top w-full h-[10vh] flex justify-between items-center bg-[#e3e3e3] px-5 border-b">
+                    <div class="profile-pic flex items-center gap-3">
+                        <img id="profile-picture" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" class="right-pic w-[50px] h-[50px] rounded-full border border-[#c7c7c7] flex-shrink-0 cursor-pointer" alt="">
+                        <div class="w-full cursor-pointer">
+                            <h1 id="chat-username" class="right-username font-medium leading-[1.2]">Username</h1>
+                            <h1 class="w-[100%] line-clamp-1 text-slate-500 text-sm leading-[1.2]">active</h1>
+                        </div>
+                    </div>
+                </div>
+                <!-- // message container  -->
+                <div class="right-center w-full h-[82vh] gap-[7px] border-b p-3 flex flex-col justify-start items-start overflow-y-auto"></div>
+                <!-- // message send bottom  -->
+                <div class="right-top w-full h-[8vh] flex justify-between items-center gap-4 bg-[#e3e3e3] px-5 border-b">
+                    <input id="input" type="text" placeholder="Send Message" class="w-full border border-black py-2 px-3 rounded outline-none font-mono" style="background: none;">
+                    <button id="button" class="bg-black w-20 py-2 rounded text-white">Send</button>
+                </div>
+                
+        </div>
+        <div class="dialog-box w-full h-full bg-[#8080802f] hidden items-center justify-center top-0 left-0 fixed opacity-0 transition-all">
+            <div class="box w-[350px] bg-white rounded-lg py-3 px-5">
+                <h1 class="text-center font-semibold text-lg">New Group</h1>
+                <div class="flex items-center gap-3 mt-2 font-medium text-[#000000a8] text-sm">
+                    <img id="select-pic" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" class="w-[50px] h-[50px] cursor-pointer rounded-full border object-cover" alt="">
+                    <span>Add group icon</span>
+                </div>
+                <div>
+                    <form id="dialog-from" action="/upload" class="w-full mt-2">
+                        <input type="file" accept="image/*" hidden id="group-pic" name="picture">
+                        <label for="" class="text-sm font-medium text-[#000000a8]">Provide a group name *</label>
+                        <input type="text" id="group-name" name="groupName" placeholder="Group name (optional)" class="w-full font-medium outline-none text-sm rounded border p-2 border-[grey]">
+                        <div class="w-full flex gap-1 mt-2">
+                            <button type="submit" id="submit-btn" class="w-1/2 bg-[#1a7547] py-[8px] rounded font-medium text-white text-sm">Create</button>
+                            <button type="reset" onclick="cancelBtn()" class="w-1/2 bg-[#5f6863] py-[8px] rounded font-medium text-white text-sm">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script>
+        const socket = io()
+        let chatUserId = null
+        let currentUserId = "<%= user._id%>"
+        socket.emit("join-user",currentUserId)
+
+        /* group setup */
+        const groupName = document.querySelector("#group-name")
+        const groupPic = document.querySelector("#group-pic")
+        const selectedPic = document.querySelector("#select-pic")
+        document.querySelector("form").addEventListener("submit",(e)=>{
+            e.preventDefault()
+            if(!groupName.value){
+                return
+            }
+            const formData = new FormData()
+            formData.append("image",groupPic.files[0])
+            socket.emit("group-create",{
+                senderid:currentUserId,
+                groupName:groupName.value,
+            })
+            socket.on("group-created",groupid=>{
+                document.querySelector("#submit-btn").textContent = "creating"
+                document.querySelector("#submit-btn").classList.replace("bg-[#1a7547]","bg-red-700")
+                axios.post(`/upload/${groupid}`,formData).then(group=>{
+                    setTimeout(()=>{
+                        console.log(group)
+                        onlineChatUsers(group.data._id,group.data.name,group.data.picture,"Hello !")
+                        cancelBtn()
+                    },2000)
+                })
+            })
+        })
+        function groupJoinDialog(){
+            const groupName = prompt("Enter group name")
+            if(!groupName){
+                return
+            }
+            socket.emit("join-group",{groupName,currentUserId})
+        }       
+        socket.on("group-not-created",msg=>{
+            alert(msg)
+        })
+        document.querySelector("#select-pic").addEventListener("click",()=>{
+            groupPic.click();
+        })
+        groupPic.addEventListener("change",()=>{
+            const dt = URL.createObjectURL(groupPic.files[0])
+            selectedPic.setAttribute("src",`${dt}`)
+        })
+        socket.on("groups-show",allGroups=>{
+            allGroups.forEach(group=>{
+                onlineChatUsers(group._id,group.name,group.picture,"Hello !")
+            })
+        })
+        socket.on("join-grouped",group=>{
+            onlineChatUsers(group._id,group.name,group.picture,"Hello !")
+            alert("group join was successful")
+        })
+        function groupDialog(){
+            document.querySelector(".dialog-box").classList.replace("hidden","flex")
+            document.querySelector(".dialog-box").classList.replace("opacity-0","opacity-1")
+        }     
+        function cancelBtn(){
+            document.querySelector("#submit-btn").textContent = "Submit"
+            document.querySelector("#submit-btn").classList.replace("bg-red-700","bg-[#1a7547]")
+            document.querySelector(".dialog-box").classList.replace("flex","hidden")
+            document.querySelector(".dialog-box").classList.replace("opacity-1","opacity-0")
+            selectedPic.setAttribute("src",`https://cdn-icons-png.flaticon.com/512/149/149071.png`)
+            groupName.value = ""
+            groupPic.value = ""
+        }
+
+        // chat user open click
+        function chatUser(id,username,picture,lastMessage) {
+            document.querySelector(".right").classList.remove("hidden")
+            document.querySelector("#profile-picture").setAttribute("src",`../images/${picture}`)
+            document.querySelector("#chat-username").textContent = username
+            chatUserId = id
+            socket.emit("get-message",{
+                senderid:currentUserId,
+                recieverid:chatUserId
+            })
+        }
+
+        // send message
+        const message = document.querySelector("#input")
+        document.querySelector("#button").addEventListener("click",()=>{
+            if(message.value != ""){
+                const data = {
+                    senderid:currentUserId,
+                    recieverid:chatUserId,
+                    message:message.value
+                }
+                socket.emit("send-message",data)
+                sendMessage(message.value)
+                message.value = ""
+            }
+        })
+        function sendMessage(msg){
+            const template = `<div class="send max-w-[45%] leading-[1] font-sans text-base font-normal p-2 bg-green-800 text-white rounded ml-auto">
+                        <h1 class="font-medium text-green-300">You</h1>
+                        <span class="text-[15px]">${msg}</span>
+                    </div>`
+            document.querySelector(".right-center").innerHTML += template
+        }
+
+        socket.on("recieved-message",msg=>{
+            if(msg.msg.recieverid == chatUserId){
+                recieverMessage(msg.senderId.name,msg.msg.message)
+            }
+        })
+        function recieverMessage(username,msg){
+            const template = `<div class="recive max-w-[45%] leading-[1] font-sans text-base font-normal py-1 px-2 bg-slate-700 text-white rounded">
+                        <h1 class="font-medium text-pink-300 text-sm mb-1">${username}</h1>
+                        <span class="text-[15px] mt-2">${msg}</span>
+                    </div>`
+            document.querySelector(".right-center").innerHTML += template
+        }
+
+        socket.on("users-show",user=>{
+            onlineChatUsers(user.id,user.name,user.picture,user.lastMessage)
+        })
+
+        function onlineChatUsers(id,username,picture,lastMessage){
+            if(!document.querySelector(`#sr_${id}`)){
+                const template = `<div id="sr_${id}" onclick="chatUser('${id}','${username}','${picture}','${lastMessage}')" class="w-full flex justify-between items-center bg-[#f0f0f0] hover:bg-[#fffafa] px-5 py-2 border-b">
+                    <div class="profile-pic flex items-center gap-3">
+                        <img src="../images/${picture}" class="w-[50px] h-[50px] rounded-full border border-[#c7c7c7] flex-shrink-0 cursor-pointer" alt="">
+                        <div class="w-full cursor-pointer">
+                            <h1 class="font-medium">${username}</h1>
+                            <h1 class="w-[100%] line-clamp-1 text-slate-500 text-sm">${lastMessage}</h1>
+                        </div>
+                    </div>
+                </div>
+                `
+                document.querySelector(".left-bottom").innerHTML += template
+            }
+        }
+
+        // message fetch database
+        socket.on("get-message",allMessage=>{
+            document.querySelector(".right-center").innerHTML = ""
+            allMessage.forEach(message=>{
+                console.log(message.recieverid)
+                console.log(currentUserId)
+                if(message.senderid._id == currentUserId){
+                    sendMessage(message.message)
+                }else{
+                    recieverMessage(message.senderid.name,message.message)
+                }
+            })
+        })
+
+    </script>
+</body>
+</html>

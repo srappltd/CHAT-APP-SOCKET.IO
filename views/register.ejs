@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.1.0/fonts/remixicon.css" rel="stylesheet"/>
+</head>
+<body>
+    <div id="main" class="w-full h-screen flex items-center justify-center flex-col">
+        <h1 class="font-semibold text-2xl text-center py-4">Register</h1>
+        <form action="/register" class="mt-6 w-[350px]" method="post" enctype="multipart/form-data">
+            <div class="flex flex-col  mt-3">
+                <div class="pro w-[90px] h-[90px] m-auto relative">
+                    <img src="https://cdn-icons-png.flaticon.com/512/149/149071.png" alt="" class="picture-img rounded-full border border-slate-500 w-full h-full">
+                    <i class="pic-select ri-add-line absolute bottom-[3px] right-[3px] text-2xl cursor-pointer w-[0px] h-[0px] bg-black flex items-center justify-center text-white p-3 rounded-full"></i>
+                </div>
+                <input type="file" id="pic-input" hidden name="picture" accept="image/*">
+            </div>
+            <div class="flex flex-col  mt-2">
+                <label for="" class="font-medium text-sm">Username</label>
+                <input type="text" placeholder="Enter username" name="name" class="border border-black rounded px-3 py-2">
+            </div>
+            
+            <div class="flex flex-col mt-2">
+                <label for="" class="font-medium text-sm">Email</label>
+                <input type="text" placeholder="Enter Email" name="email" class="border border-black rounded px-3 py-2">
+            </div>
+            <div class="flex flex-col mt-2">
+                <label for="" class="font-medium text-sm">Mobile</label>
+                <input type="text" placeholder="Enter Mobile" name="mobile" class="border border-black rounded px-3 py-2">
+            </div>
+            <div class="flex flex-col mt-2">
+                <label for="" class="font-medium text-sm">Password</label>
+                <input type="text" placeholder="Enter Mobile" name="password" class="border border-black rounded px-3 py-2">
+            </div>
+            <p class="error text-center w-full text-red-700 font-medium text-sm">Alert</p>
+            <button class="bg-green-700 w-full rounded py-2 mt-4 font-medium text-white">Register</button>
+            <a href="/login" class="font-medium text-sm">Login</a>
+        </form>
+    </div>
+    <script>
+        document.querySelector(".pic-select").addEventListener("click",()=>{
+            document.querySelector("#pic-input").click()
+        })
+        document.querySelector("#pic-input").addEventListener("change",()=>{
+            document.querySelector(".picture-img").src = URL.createObjectURL(document.querySelector("#pic-input").files[0])
+        })
+
+        setTimeout(() => {
+            document.querySelector(".error").textContent = ""
+        }, 2000);
+    </script>
+</body>
+</html>
