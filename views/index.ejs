@@ -21,7 +21,7 @@
             <!-- // current user  -->
             <div class="left-top w-full h-[10vh] flex justify-between items-center bg-[#e3e3e3] border-b px-5">
                 <div class="profile-pic flex items-center gap-3">
-                    <img src="../images/<%= user.picture%>" class="w-[50px] h-[50px] rounded-full border" alt="">
+                    <img src="<%= user.picture%>" class="w-[50px] h-[50px] rounded-full border" alt="">
                     <h1 class="font-medium"><%= user.name%></h1>
                 </div>
                 <div class="flex items-center gap-3">
@@ -153,7 +153,7 @@
         // chat user open click
         function chatUser(id,username,picture,lastMessage) {
             document.querySelector(".right").classList.remove("hidden")
-            document.querySelector("#profile-picture").setAttribute("src",`../images/${picture}`)
+            document.querySelector("#profile-picture").setAttribute("src",`${picture}`)
             document.querySelector("#chat-username").textContent = username
             chatUserId = id
             socket.emit("get-message",{
@@ -184,11 +184,17 @@
             document.querySelector(".right-center").innerHTML += template
         }
 
-        socket.on("recieved-message",msg=>{
+        socket.on("recieved-message-user",msg=>{
+            if(msg.msg.senderid == chatUserId){
+                recieverMessage(msg.senderId.name,msg.msg.message)
+            }
+        })
+        socket.on("recieved-message-group",msg=>{
             if(msg.msg.recieverid == chatUserId){
                 recieverMessage(msg.senderId.name,msg.msg.message)
             }
         })
+        
         function recieverMessage(username,msg){
             const template = `<div class="recive max-w-[45%] leading-[1] font-sans text-base font-normal py-1 px-2 bg-slate-700 text-white rounded">
                         <h1 class="font-medium text-pink-300 text-sm mb-1">${username}</h1>
@@ -205,7 +211,7 @@
             if(!document.querySelector(`#sr_${id}`)){
                 const template = `<div id="sr_${id}" onclick="chatUser('${id}','${username}','${picture}','${lastMessage}')" class="w-full flex justify-between items-center bg-[#f0f0f0] hover:bg-[#fffafa] px-5 py-2 border-b">
                     <div class="profile-pic flex items-center gap-3">
-                        <img src="../images/${picture}" class="w-[50px] h-[50px] rounded-full border border-[#c7c7c7] flex-shrink-0 cursor-pointer" alt="">
+                        <img src="${picture}" class="w-[50px] h-[50px] rounded-full border border-[#c7c7c7] flex-shrink-0 cursor-pointer" alt="">
                         <div class="w-full cursor-pointer">
                             <h1 class="font-medium">${username}</h1>
                             <h1 class="w-[100%] line-clamp-1 text-slate-500 text-sm">${lastMessage}</h1>

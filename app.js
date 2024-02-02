@@ -6,11 +6,14 @@ const cookieParser = require('cookie-parser');
 const logger = require('morgan');
 const session = require("express-session")
 const bodyParser = require("body-parser")
+const passport = require("passport")
+const localStategy = require("passport-local")
 
-const indexRouter = require('./routes/index');
-const usersRouter = require('./routes/users');
 const {Mongoose} = require("./db")
 Mongoose(process.env.DATABASE)
+const indexRouter = require('./routes/index');
+const {userModel} = require("./models/userModel")
+const usersRouter = require('./routes/users');
 
 const app = express();
 
@@ -19,11 +22,22 @@ app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
 
 app.use(logger('dev'));
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: false }));
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// email & password login
 app.use(session({secret:process.env.SESSION,resave:true,saveUninitialized:false,cookie:{maxAge:24*60*60*1000}}))
+app.use(passport.initialize())
+app.use(passport.session())
+passport.serializeUser((user,cb)=>{
+  cb(null,user)
+})
+passport.deserializeUser((user,cb)=>{
+  cb(null,user)
+})
+passport.use(new localStategy({usernameField:"email"},userModel.authenticate()))
 
 app.use('/', indexRouter);
 app.use('/users', usersRouter);

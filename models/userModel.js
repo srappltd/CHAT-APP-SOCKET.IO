@@ -1,13 +1,17 @@
 const mongoose = require("mongoose")
+const plm = require("passport-local-mongoose")
 const d = new Date()
 
 const userSchema = new mongoose.Schema({
     picture:String,
-    name:String,
-    email:String,
+    name:{type:String},
+    username:{type:String},
+    email:{type:String,required:true,unique:true},
+    mobile:{type:String,default:""},
+    googleid:{type:String,default:""},
     socketid:{type:String,default:""},
-    password:String,
 },{timestamps:true,versionKey:false})
+userSchema.plugin(plm,{ usernameField: 'email' })
 const userModel = mongoose.model("user",userSchema)
 
 const messageSchema = new mongoose.Schema({

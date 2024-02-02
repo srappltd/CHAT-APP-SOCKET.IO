@@ -33,11 +33,9 @@ io.on("connection",socket=>{
             users:{$in:userid}
         })
         socket.emit("groups-show",allGroups)
-        console.log(allGroups)
     })
 
     socket.on("send-message",async msg=>{
-        console.log(msg)
         const recierId = await userModel.findById(msg.recieverid)
         const senderId = await userModel.findById(msg.senderid)
         await messageModel.create({message:msg.message,senderid:msg.senderid,recieverid:msg.recieverid})
@@ -46,14 +44,12 @@ io.on("connection",socket=>{
             if(!groupId){
                 return
             }
-            console.log(groupId)
             groupId.users.forEach(user=>{
-                console.log(user.socketid)
-                socket.to(user.socketid).emit("recieved-message",{msg,senderId})
+                socket.to(user.socketid).emit("recieved-message-group",{msg,senderId})
             })
         }
         if(recierId){
-            socket.to(recierId.socketid).emit("recieved-message",{msg,senderId})
+            socket.to(recierId.socketid).emit("recieved-message-user",{msg,senderId})
         }
     })
 
@@ -67,7 +63,6 @@ io.on("connection",socket=>{
             const allMessages = await messageModel.find({
                 recieverid:user.recieverid
             }).populate("senderid")
-            console.log(allMessages)
             socket.emit("get-message",allMessages)
         }
         if(recierId){
@@ -83,7 +78,6 @@ io.on("connection",socket=>{
                     }
                 ]
             }).populate("senderid")
-            console.log(allMessages)
             socket.emit("get-message",allMessages)
         }
         
@@ -92,7 +86,7 @@ io.on("connection",socket=>{
 
     socket.on("group-create",async group=>{
         const groupFind = await groupModel.findOne({name:group.groupName})
-        if(!groupFind){
+        if(groupFind){
             return socket.emit("group-not-created","allready group created")
         }
         const groupCreate = await groupModel.create({name:group.groupName,createrid:group.senderid})
@@ -106,7 +100,6 @@ io.on("connection",socket=>{
         if(!groupFind){
             return socket.emit("group-not-created","Group not found")
         }
-        console.log(groupFind)
         groupFind.users.push(group.currentUserId)
         await groupFind.save()
         socket.emit("join-grouped",groupFind)

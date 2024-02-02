@@ -1,73 +1,94 @@
 var express = require("express");
 var router = express.Router();
-const bcrypt = require("bcrypt")
+const passport = require("passport")
+const googleStrategy = require("passport-google-oauth20").Strategy
 
-
-const { Login, Logout } = require("./middleware");
 const { userModel, groupModel} = require("../models/userModel");
 const {userMulter} = require("../multer/multer")
 
-/* GET home page. */
-router.get("/",Logout, async function (req, res, next) {
-  if(req.session.user){
-    const user = await userModel.findById(req.session.user._id);
-    res.render("index", { user });
+// middleware for authenticating
+function isLoggedIn(req,res,next){
+  if(req.isAuthenticated()){
+    return next()
   }
+  res.redirect("/login")
+}
+
+
+/* GET home page. */
+router.get("/",isLoggedIn, async function (req, res, next) {
+    const user = await userModel.findById(req.user._id);
+    return res.render("index", { user });
 });
-router.get("/login", Login, function (req, res, next) {
+router.get("/login", function (req, res, next) {
+  if(req.user){
+    return res.redirect("/")
+  }
   res.render("login");
 });
-router.get("/register", Login, function (req, res, next) {
+router.get("/register", function (req, res, next) {
+  if(req.user){
+    return res.redirect("/")
+  }
   res.render("register");
 });
 
-router.post("/login", async (req, res, next) => {
-  const { email, password } = req.body;
-  const userFind = await userModel.findOne({ email });
-  if (email && password) {
-    if (userFind) {
-      const passhash = await bcrypt.compare(password, userFind.password);
-      if (userFind.email == email && passhash) {
-        req.session.user = userFind;
-        res.redirect("/");
-      } else {
-        res.render("login", { error: "Email & Password mismatch" });
-      }
-    } else {
-      res.render("login", { error: "User not exist!" });
+// email and password authentication
+router.post("/login", passport.authenticate("local",{
+  successRedirect:"/",
+  failureRedirect:"/login",
+  // failureFlash:true
+}))
+router.post('/register',userMulter.single("picture"),async function(req, res, next) {
+  const {name,username,email,password,mobile} =req.body
+  const userFind = await userModel.findOne({email})
+  if(name && username && email && password && mobile){
+    if(userFind){
+      return res.redirect("/login")
     }
-  } else {
-    res.render("login", { error: "Allfields required" });
+    userModel.register(new userModel({name, username, email, mobile, picture:`../images/${req.file.filename}`}),password).then(register=>{
+      passport.authenticate("local")(req,res,()=>{
+        return res.redirect("/")
+      })
+    })
+  }else{
+    res.send("All field must be required")
   }
 });
-router.post("/register",userMulter.single("picture"),
-  async (req, res, next) => {
-    const { name, email, mobile, password } = req.body;
-    const userFind = await userModel.findOne({ email });
-    if (email && password && name && mobile) {
-      if (!req.file) {
-        return res.render("register", { error: "Picture not found!" });
-      }
-      if (!userFind) {
-        const passhash = await bcrypt.hash(password, 10);
-        const data = await userModel.create({picture: req.file.filename,name,email,mobile,password: passhash,
-        });
-        req.session.user = data;
-        res.redirect("/");
-      } else {
-        res.render("register", { error: "User allready exist!" });
-      }
-    } else {
-      res.render("register", { error: "Allfields required" });
-    }
-  }
-);
 
-router.post("/upload/:groupid",Logout,userMulter.single("image"),async (req,res)=>{
-  if(req.session.user){
-    console.log(req.file)
+// google authorization
+router.get("/login/federated/google",passport.authenticate("google"))
+router.get("/oauth2/redirect/google",passport.authenticate("google",{
+  successRedirect:"/",
+  failureRedirect:"/login"
+}))
+// google authorization
+passport.use(new googleStrategy({
+  clientID:process.env.GOOGLE_ID,
+  clientSecret:process.env.GOOGLE_SEC,
+  callbackURL:"/oauth2/redirect/google",
+  scope:['profile','email','openid']
+},async (accessToken,refreshToken,profile,cb)=>{
+  console.log(profile)
+  const userFind = await userModel.findOne({googleid:profile.id})
+  if(userFind){
+    return cb(null,userFind)
+  }
+  const userData = await userModel.create({
+    name:profile.displayName,
+    email:profile.emails[0].value,
+    picture:profile.photos[0].value,
+    googleid:profile.id,
+  }) 
+  cb(null,userData)
+}))
+
+
+router.post("/upload/:groupid",isLoggedIn,userMulter.single("image"),async (req,res)=>{
+  if(req.user){
+    console.log(req.user)
     const group = await groupModel.findById(req.params.groupid)
-    group.picture = req.file.filename
+    group.picture = `../images/${req.file.filename}` 
     await group.save()
     res.json(group);
   }
